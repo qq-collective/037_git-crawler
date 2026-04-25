@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QQ #037 — Git Crawler</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Zen+Kaku+Gothic+New:wght@300;400;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #f0ead8;
+    --bg2: #e4dbc8;
+    --ink: #1a1208;
+    --ink2: #4a3a28;
+    --gold: #b07820;
+    --gold2: #d4a050;
+    --rust: #8b4513;
+    --sage: #3a6a3a;
+    --card: #f7f2e8;
+    --border: #c0a878;
+    --shadow: rgba(26,18,8,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 20px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    border-bottom: 3px solid var(--gold);
+  }
+  header .qq-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gold2);
+    letter-spacing: 0.15em;
+  }
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+  header .sub {
+    font-size: 12px;
+    color: #a09080;
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    background: var(--bg2);
+    border-bottom: 2px solid var(--border);
+    padding: 0 32px;
+  }
+  .tab-btn {
+    padding: 14px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--ink2);
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+    margin-bottom: -2px;
+  }
+  .tab-btn.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+    font-weight: 700;
+  }
+  .tab-btn:hover:not(.active) { color: var(--ink); }
+
+  /* ── PANELS ── */
+  .panel { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* ── STAGE LABELS ── */
+  .stage-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .stage-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--ink);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── CRAWLER PANEL ── */
+  .crawler-config {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .config-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .config-row label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--ink2);
+    width: 120px;
+    flex-shrink: 0;
+  }
+  .config-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 3px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 12px 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--rust); }
+  .btn-primary:disabled { background: #999; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: none;
+    color: var(--ink2);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* status bar */
+  .status-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--ink2);
+    margin-bottom: 20px;
+    min-height: 38px;
+  }
+  .status-bar.running { color: var(--gold); border-color: var(--gold2); }
+  .status-bar.done { color: var(--sage); border-color: var(--sage); }
+  .status-bar.error { color: var(--rust); border-color: var(--rust); }
+
+  /* repo grid */
+  .repo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .repo-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .repo-card:hover { border-color: var(--gold); box-shadow: 0 2px 12px var(--shadow); }
+  .repo-card.selected { border-color: var(--gold); background: #fef9ef; }
+  .repo-card .repo-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+  .repo-card .repo-desc {
+    font-size: 12px;
+    color: var(--ink2);
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+  .repo-card .repo-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #a09080;
+    display: flex;
+    gap: 12px;
+  }
+  .repo-card .has-md {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--gold2);
+    color: var(--ink);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+
+  /* ── INDEX PANEL ── */
+  .index-summary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+  .index-stat { text-align: center; }
+  .index-stat .num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .index-stat .label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--ink2);
+    letter-spacing: 0.1em;
+  }
+  .index-divider { width: 1px; background: var(--border); height: 50px; }
+
+  .md-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .md-table th {
+    background: var(--bg2);
+    padding: 10px 16px;
+    text-align: left;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink2);
+    border-bottom: 1px solid var(--border);
+  }
+  .md-table td {
+    padding: 10px 16px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .md-table tr:last-child td { border-bottom: none; }
+  .md-table tr:hover td { background: #fef9ef; }
+  .md-table .repo-col {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    width: 200px;
+  }
+  .md-table .preview-col {
+    color: var(--ink2);
+    line-height: 1.5;
+    font-size: 11px;
+  }
+  .md-table .size-col {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: #a09080;
+    width: 80px;
+    text-align: right;
+  }
+
+  .build-btn-wrap {
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* ── CHAT PANEL ── */
+  .chat-header-bar {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .clone-avatar {
+    width: 44px;
+    height: 44px;
+    background: var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px;
+    color: var(--gold2);
+    flex-shrink: 0;
+  }
+  .clone-info .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 300;
+  }
+  .clone-info .desc {
+    font-size: 11px;
+    color: var(--ink2);
+    font-family: 'Space Mono', monospace;
+  }
+  .clone-status {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    background: var(--bg2);
+    color: var(--ink2);
+    border: 1px solid var(--border);
+  }
+  .clone-status.online { background: #e8f5e8; color: var(--sage); border-color: var(--sage); }
+
+  /* api key row */
+  .api-key-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  .api-key-row label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--ink2);
+    flex-shrink: 0;
+  }
+  .api-key-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 3px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--ink);
+  }
+
+  .chat-window {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    height: 380px;
+    overflow-y: auto;
+    padding: 20px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .chat-empty {
+    margin: auto;
+    text-align: center;
+    color: var(--ink2);
+  }
+  .chat-empty .icon { font-size: 32px; margin-bottom: 8px; }
+  .chat-empty p { font-size: 12px; font-family: 'Space Mono', monospace; line-height: 1.8; }
+
+  .bubble {
+    max-width: 78%;
+    padding: 12px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .bubble.user {
+    background: var(--ink);
+    color: var(--bg);
+    align-self: flex-end;
+    border-radius: 4px 4px 0 4px;
+  }
+  .bubble.assistant {
+    background: #e8dfc8;
+    color: #1a1208;
+    align-self: flex-start;
+    border-radius: 4px 4px 4px 0;
+    border-left: 3px solid var(--gold);
+    font-weight: 400;
+  }
+  .bubble .sender {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+    opacity: 0.6;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+  }
+  .chat-input-row textarea {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    border-radius: 3px;
+    font-family: 'Zen Kaku Gothic New', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    resize: none;
+    height: 60px;
+    line-height: 1.5;
+  }
+  .chat-input-row textarea:focus { outline: none; border-color: var(--gold); }
+
+  /* ── LOADING DOTS ── */
+  .thinking {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    padding: 8px 0;
+  }
+  .thinking span {
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+  }
+  .thinking span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1.1); }
+  }
+
+  /* progress */
+  .progress-wrap { margin-bottom: 16px; }
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  .notice {
+    background: #fef9ef;
+    border: 1px solid var(--gold2);
+    border-radius: 3px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--ink2);
+    margin-bottom: 16px;
+    font-family: 'Space Mono', monospace;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="qq-num">QQ #037</span>
+  <h1>Git Crawler</h1>
+  <span class="sub">qq-collective · prototype</span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('crawler')">STAGE 1 · Crawler</button>
+  <button class="tab-btn" onclick="switchTab('index')" id="tab-index">STAGE 2 · Index</button>
+  <button class="tab-btn" onclick="switchTab('chat')" id="tab-chat">STAGE 3 · Clone Chat</button>
+</div>
+
+<!-- ═══ STAGE 1: CRAWLER ═══ -->
+<div class="panel active" id="panel-crawler">
+  <div class="stage-label">STAGE 1</div>
+  <div class="stage-title">GitHub Crawler — qq-collectiveのMDを収集する</div>
+
+  <div class="crawler-config">
+    <div class="config-row">
+      <label>GitHub User</label>
+      <input type="text" id="gh-user" value="qq-collective" placeholder="GitHubユーザー名">
+    </div>
+    <div class="config-row">
+      <label>対象ファイル</label>
+      <input type="text" id="md-filter" value="README.md" placeholder="README.md">
+    </div>
+    <div style="display:flex; gap:12px;">
+      <button class="btn-primary" id="crawl-btn" onclick="startCrawl()">▶ クローラー起動</button>
+      <button class="btn-secondary" onclick="loadDemo()">デモデータで試す</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap" style="display:none;">
+    <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--ink2);margin-bottom:6px;" id="progress-label">0 / 0</div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+
+  <div class="status-bar" id="crawl-status">待機中 — クローラーを起動してください</div>
+
+  <div class="repo-grid" id="repo-grid"></div>
+</div>
+
+<!-- ═══ STAGE 2: INDEX ═══ -->
+<div class="panel" id="panel-index">
+  <div class="stage-label">STAGE 2</div>
+  <div class="stage-title">Index — 収集したMDを集約する</div>
+
+  <div class="index-summary" id="index-summary">
+    <div class="index-stat">
+      <div class="num" id="stat-repos">—</div>
+      <div class="label">REPOS</div>
+    </div>
+    <div class="index-divider"></div>
+    <div class="index-stat">
+      <div class="num" id="stat-mds">—</div>
+      <div class="label">MD FILES</div>
+    </div>
+    <div class="index-divider"></div>
+    <div class="index-stat">
+      <div class="num" id="stat-chars">—</div>
+      <div class="label">CHARS</div>
+    </div>
+    <div style="margin-left:auto;">
+      <button class="btn-secondary" onclick="exportIndex()">↓ JSON export</button>
+    </div>
+  </div>
+
+  <table class="md-table" id="md-table">
+    <thead>
+      <tr>
+        <th>REPOSITORY</th>
+        <th>MD PREVIEW</th>
+        <th style="text-align:right;">CHARS</th>
+      </tr>
+    </thead>
+    <tbody id="md-tbody"></tbody>
+  </table>
+
+  <div class="build-btn-wrap">
+    <button class="btn-primary" onclick="buildClone()">▶ Clone Chatを構築する</button>
+    <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--ink2);" id="build-status"></span>
+  </div>
+</div>
+
+<!-- ═══ STAGE 3: CLONE CHAT ═══ -->
+<div class="panel" id="panel-chat">
+  <div class="stage-label">STAGE 3</div>
+  <div class="stage-title">Clone Chat — <span id="clone-char-name">QQ-C</span> に相談する</div>
+
+  <div class="chat-header-bar">
+    <div class="clone-avatar" id="clone-avatar-initial">Q</div>
+    <div class="clone-info">
+      <div class="name" id="clone-display-name">QQ-C</div>
+      <div class="desc">powered by <span id="clone-account-label">qq-collective</span> MDナレッジ</div>
+    </div>
+    <div class="clone-status" id="clone-status-badge">OFFLINE</div>
+  </div>
+
+  <div class="api-key-row">
+    <label>API KEY</label>
+    <input type="password" id="api-key-input" placeholder="sk-ant-..." oninput="saveApiKey()">
+    <button class="btn-secondary" onclick="clearChat()">会話リセット</button>
+  </div>
+
+  <div class="notice" id="context-notice">
+    ⚠ まずStage 1→2を実行してIndexを構築してください。または「デモデータで試す」からお試しいただけます。
+  </div>
+
+  <div class="chat-window" id="chat-window">
+    <div class="chat-empty">
+      <div class="icon">🧠</div>
+      <p>Masakiクローンに何でも相談してください。<br>アプリアイデア、開発の進め方、もやもやした課題など。</p>
+    </div>
+  </div>
+
+  <div class="chat-input-row">
+    <textarea id="chat-input" placeholder="こんなアプリ作りたいんだけど…" onkeydown="handleKey(event)"></textarea>
+    <button class="btn-primary" id="send-btn" onclick="sendMessage()">送信</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════
+// CHAR NAME GENERATOR
+// ══════════════════════════════
+function generateCharName(accountName) {
+  // ハイフン・アンダースコアで分割して各パートの頭文字を大文字で取る
+  const parts = accountName.split(/[-_]/).filter(p => p.length > 0);
+  if (parts.length === 1) {
+    // 分割できない場合は先頭3文字大文字
+    return accountName.slice(0, 3).toUpperCase();
+  }
+  return parts.map(p => p[0].toUpperCase()).join('') + '-' + parts[parts.length - 1][0].toUpperCase();
+}
+
+function updateCloneIdentity(accountName) {
+  const charName = generateCharName(accountName);
+  document.getElementById('clone-char-name').textContent = charName;
+  document.getElementById('clone-display-name').textContent = charName;
+  document.getElementById('clone-account-label').textContent = accountName;
+  document.getElementById('clone-avatar-initial').textContent = charName[0];
+}
+
+// ══════════════════════════════
+// STATE
+// ══════════════════════════════
+let repos = [];
+let mdIndex = []; // {repo, name, content, url}
+let chatHistory = [];
+let cloneSystemPrompt = '';
+let isCrawling = false;
+
+// ══════════════════════════════
+// TABS
+// ══════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ══════════════════════════════
+// STAGE 1: CRAWLER
+// ══════════════════════════════
+async function startCrawl() {
+  if (isCrawling) return;
+  isCrawling = true;
+  const user = document.getElementById('gh-user').value.trim() || 'qq-collective';
+  updateCloneIdentity(user);
+  const btn = document.getElementById('crawl-btn');
+  btn.disabled = true;
+  repos = [];
+  mdIndex = [];
+  document.getElementById('repo-grid').innerHTML = '';
+
+  setStatus('crawl-status', 'running', `⟳ ${user} のリポジトリを取得中...`);
+
+  try {
+    // リポジトリ一覧取得
+    const res = await fetch(`https://api.github.com/users/${user}/repos?per_page=100&sort=updated`);
+    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+    repos = await res.json();
+
+    setStatus('crawl-status', 'running', `✓ ${repos.length}件のリポジトリを発見。MDファイルを検索中...`);
+    showProgress(0, repos.length);
+
+    // 各リポジトリのREADME取得
+    for (let i = 0; i < repos.length; i++) {
+      const repo = repos[i];
+      updateProgress(i + 1, repos.length, repo.name);
+      try {
+        const mdRes = await fetch(`https://api.github.com/repos/${user}/${repo.name}/readme`, {
+          headers: { 'Accept': 'application/vnd.github.v3.raw' }
+        });
+        if (mdRes.ok) {
+          const content = await mdRes.text();
+          mdIndex.push({ repo: repo.name, name: 'README.md', content, url: repo.html_url, desc: repo.description });
+          renderRepoCard(repo, true);
+        } else {
+          renderRepoCard(repo, false);
+        }
+      } catch(e) {
+        renderRepoCard(repo, false);
+      }
+      await sleep(80); // rate limit対策
+    }
+
+    setStatus('crawl-status', 'done', `✓ 完了！ ${repos.length}リポジトリ中 ${mdIndex.length}件のMDを収集しました`);
+    updateIndexPanel();
+  } catch(e) {
+    setStatus('crawl-status', 'error', `✗ エラー: ${e.message}`);
+  }
+
+  isCrawling = false;
+  btn.disabled = false;
+  hideProgress();
+}
+
+function renderRepoCard(repo, hasMd) {
+  const grid = document.getElementById('repo-grid');
+  const card = document.createElement('div');
+  card.className = 'repo-card';
+  card.innerHTML = `
+    ${hasMd ? '<span class="has-md">MD ✓</span>' : ''}
+    <div class="repo-name">${repo.name}</div>
+    <div class="repo-desc">${repo.description || '（説明なし）'}</div>
+    <div class="repo-meta">
+      <span>${repo.language || '—'}</span>
+      <span>★ ${repo.stargazers_count}</span>
+      <span>${new Date(repo.updated_at).toLocaleDateString('ja-JP')}</span>
+    </div>
+  `;
+  grid.appendChild(card);
+}
+
+function showProgress(cur, total) {
+  document.getElementById('progress-wrap').style.display = 'block';
+  updateProgress(cur, total, '');
+}
+function hideProgress() {
+  document.getElementById('progress-wrap').style.display = 'none';
+}
+function updateProgress(cur, total, name) {
+  const pct = total > 0 ? (cur / total * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${cur} / ${total} — ${name}`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function setStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'status-bar ' + type;
+  el.textContent = msg;
+}
+
+// デモデータ
+function loadDemo() {
+  const user = document.getElementById('gh-user').value.trim() || 'qq-collective';
+  updateCloneIdentity(user);
+  repos = [
+    {name: 'MoyaMoya_Alchemist', description: 'もやもやをアプリに錬成する対話アプリ', language: 'HTML', stargazers_count: 0, updated_at: new Date().toISOString(), html_url: '#'},
+    {name: 'qu_ted_project', description: 'QU_TED Series — 英語セミナー支援ツール群', language: 'HTML', stargazers_count: 0, updated_at: new Date().toISOString(), html_url: '#'},
+    {name: '036_agora-platz-rakuza', description: 'SCENARI AGORA STUDIO — イベント記録DB', language: 'HTML', stargazers_count: 0, updated_at: new Date().toISOString(), html_url: '#'},
+    {name: '-001_hoshiyomi_seven', description: '七人の星読みたち — 占いアプリ', language: 'HTML', stargazers_count: 0, updated_at: new Date().toISOString(), html_url: '#'},
+    {name: 'higher-runner', description: 'Higher Runner — ランナー向け記録アプリ', language: 'HTML', stargazers_count: 0, updated_at: new Date().toISOString(), html_url: '#'},
+  ];
+  mdIndex = [
+    { repo: 'MoyaMoya_Alchemist', name: 'README.md', content: `# MoyaMoya Alchemist\n\nもやもやした課題や感情を、AIとの対話を通じてアプリのアイデアに「錬成」する。QQシリーズの哲学：シンプルで壊れない単一HTMLファイル。VanillaJS。GitHub Pagesでデプロイ。初心者でも使えるUI。moyamoya結晶化がコアコンセプト。`, url: '#', desc: 'もやもやをアプリに錬成する対話アプリ' },
+    { repo: 'qu_ted_project', name: 'README.md', content: `# QU_TED Project\n\nセナリ学院の英語セミナー支援ツール群。Timothy, Elice, Donovan, Dr.Mucho, Hayatoの5キャラクター。英語学習者が対話形式で学べる。Japanese voice first（日本語で考えて英語に展開）。`, url: '#', desc: '英語セミナー支援ツール群' },
+    { repo: '036_agora-platz-rakuza', name: 'README.md', content: `# SCENARI AGORA STUDIO\n\n平野友康氏の講義・イベントのアーカイブDB。141レコード収録。絵文字ベースのHidden Code分類（🏛️定番/🔥今が旬/📦原石/⭐授業向き）。`, url: '#', desc: 'イベントDB' },
+    { repo: '-001_hoshiyomi_seven', name: 'README.md', content: `# 七人の星読みたち\n\nQQシリーズ第1号。7人の星読みキャラクターが占いをする。Vanilla JS。単一HTML。セナリ学院で使用。`, url: '#', desc: '占いアプリ' },
+    { repo: 'higher-runner', name: 'README.md', content: `# Higher Runner\n\nランナー向けの記録・モチベーションアプリ。フルマラソン・ハーフ・10kmのペース計算。Chart.jsによるビジュアライゼーション。`, url: '#', desc: 'ランナーアプリ' },
+  ];
+
+  document.getElementById('repo-grid').innerHTML = '';
+  repos.forEach(r => renderRepoCard(r, mdIndex.some(m => m.repo === r.name)));
+  setStatus('crawl-status', 'done', `✓ デモデータ読み込み完了 — ${repos.length}リポジトリ、${mdIndex.length}件のMD`);
+  updateIndexPanel();
+}
+
+// ══════════════════════════════
+// STAGE 2: INDEX
+// ══════════════════════════════
+function updateIndexPanel() {
+  document.getElementById('stat-repos').textContent = repos.length;
+  document.getElementById('stat-mds').textContent = mdIndex.length;
+  const totalChars = mdIndex.reduce((a, m) => a + m.content.length, 0);
+  document.getElementById('stat-chars').textContent = totalChars > 1000 ? Math.round(totalChars/1000) + 'k' : totalChars;
+
+  const tbody = document.getElementById('md-tbody');
+  tbody.innerHTML = '';
+  mdIndex.forEach(m => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="repo-col">${m.repo}</td>
+      <td class="preview-col">${escHtml(m.content.slice(0, 120).replace(/\n/g, ' '))}…</td>
+      <td class="size-col">${m.content.length.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportIndex() {
+  const data = JSON.stringify(mdIndex, null, 2);
+  const blob = new Blob([data], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qq037_index.json';
+  a.click();
+}
+
+function buildClone() {
+  if (mdIndex.length === 0) {
+    document.getElementById('build-status').textContent = '⚠ まずStage 1でMDを収集してください';
+    return;
+  }
+
+  // システムプロンプト構築
+  const mdDump = mdIndex.map(m =>
+    `### [${m.repo}]\n${m.content.slice(0, 800)}`
+  ).join('\n\n---\n\n');
+
+  cloneSystemPrompt = `あなたはMasaki（セナリ学院の開発者・ファシリテーター）のクローンAIです。
+
+以下はMasakiが実際に作ったアプリたちのREADMEから抽出したナレッジベースです。
+
+## Masakiの開発哲学
+- シンプルで壊れない単一HTMLファイルで作る（VanillaJS、GitHub Pages）
+- 「もやもや結晶化」がコアコンセプト：漠然とした課題をアプリのアイデアに変換する
+- 守破離の思想：まず既存パターンをマスターしてから発展させる
+- 初心者でも使えるUIと、セナリ学院のコミュニティ向けの設計
+- 複雑な技術スタックより、動くものを早く届けることを優先
+
+## Masakiのプロジェクト群（qq-collectiveより）
+${mdDump}
+
+## あなたの役割
+- セナリ学院の受講生や仲間からの「アプリを作りたい」「こんな問題がある」という相談に答える
+- Masakiなら何と言うか、という視点で答える
+- 具体的で、実現可能で、単一HTMLという制約の中で考える
+- 技術的な複雑さより「動くシンプルなもの」を優先する提案をする
+- 日本語で自然に話す。専門用語は必要最低限
+
+相談者のもやもやを聞いて、Masakiっぽく、温かく、具体的に答えてください。`;
+
+  document.getElementById('clone-status-badge').textContent = 'ONLINE';
+  document.getElementById('clone-status-badge').className = 'clone-status online';
+  document.getElementById('context-notice').style.display = 'none';
+  document.getElementById('build-status').textContent = `✓ ${mdIndex.length}件のMDでCloneを構築しました`;
+
+  // Stage 3に誘導
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-chat').classList.add('active');
+  document.querySelectorAll('.tab-btn')[2].classList.add('active');
+}
+
+// ══════════════════════════════
+// STAGE 3: CLONE CHAT
+// ══════════════════════════════
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value;
+  if (key.startsWith('sk-ant-')) localStorage.setItem('qq037_apikey', key);
+}
+
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('qq037_apikey');
+  if (saved) document.getElementById('api-key-input').value = saved;
+});
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const apiKey = document.getElementById('api-key-input').value.trim();
+  if (!apiKey) {
+    alert('APIキーを入力してください');
+    return;
+  }
+
+  if (!cloneSystemPrompt) {
+    alert('まずStage 2で「Clone Chatを構築する」を押してください');
+    return;
+  }
+
+  input.value = '';
+  addBubble('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  const thinkingId = addThinking();
+  document.getElementById('send-btn').disabled = true;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: cloneSystemPrompt,
+        messages: chatHistory
+      })
+    });
+
+    removeThinking(thinkingId);
+
+    if (!res.ok) {
+      const err = await res.json();
+      addBubble('assistant', `⚠ APIエラー: ${err.error?.message || res.status}`);
+      chatHistory.pop();
+    } else {
+      const data = await res.json();
+      const reply = data.content[0].text;
+      addBubble('assistant', reply);
+      chatHistory.push({ role: 'assistant', content: reply });
+    }
+  } catch(e) {
+    removeThinking(thinkingId);
+    addBubble('assistant', `⚠ エラーが発生しました: ${e.message}`);
+    chatHistory.pop();
+  }
+
+  document.getElementById('send-btn').disabled = false;
+}
+
+function addBubble(role, text) {
+  const win = document.getElementById('chat-window');
+  // 最初のempty表示を消す
+  const empty = win.querySelector('.chat-empty');
+  if (empty) empty.remove();
+
+  const div = document.createElement('div');
+  div.className = 'bubble ' + role;
+  div.innerHTML = `<div class="sender">${role === 'user' ? 'YOU' : document.getElementById('clone-display-name').textContent}</div>${escHtml(text).replace(/\n/g, '<br>')}`;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+  return div;
+}
+
+let thinkingCounter = 0;
+function addThinking() {
+  const win = document.getElementById('chat-window');
+  const id = 'thinking-' + (++thinkingCounter);
+  const div = document.createElement('div');
+  div.className = 'bubble assistant';
+  div.id = id;
+  div.innerHTML = `<div class="sender">MASAKI CLONE</div><div class="thinking"><span></span><span></span><span></span></div>`;
+  win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+  return id;
+}
+function removeThinking(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function clearChat() {
+  chatHistory = [];
+  const win = document.getElementById('chat-window');
+  win.innerHTML = `<div class="chat-empty"><div class="icon">🧠</div><p>Masakiクローンに何でも相談してください。<br>アプリアイデア、開発の進め方、もやもやした課題など。</p></div>`;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
