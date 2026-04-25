@@ -865,6 +865,17 @@ ${mdDump}
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-chat').classList.add('active');
   document.querySelectorAll('.tab-btn')[2].classList.add('active');
+
+  // 読み込み確認サインを自動表示
+  const latestRepo = mdIndex[mdIndex.length - 1]?.repo || '—';
+  const signText = `📦 ${mdIndex.length}個のREADMEを読み込みました。最後に確認したのは「${latestRepo}」です。何でも聞いてください。`;
+  const win = document.getElementById('chat-window');
+  win.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'bubble assistant';
+  div.innerHTML = `<div class="sender">${charName}</div>${escHtml(signText)}`;
+  win.appendChild(div);
+  chatHistory = [];
 }
 
 // ══════════════════════════════
