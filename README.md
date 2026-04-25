@@ -70,7 +70,7 @@ taro-yamada    →  TY-A
 
 ## QQ Seriesについて
 
-セナリ学院発、日常の「もやもや」をAIとの対話でアプリに結晶化するプロジェクト。  
+日常の「もやもや」をAIとの対話でアプリに結晶化するプロジェクト。  
 すべて単一HTMLファイル、VanillaJS、GitHub Pagesで動く。
 
 → [qq-collective](https://github.com/qq-collective)
