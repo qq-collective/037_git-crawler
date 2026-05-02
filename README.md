@@ -1,4 +1,4 @@
-# QQ #037 — Git Crawler
+# QQ #037 — Git Vision
 
 > GitHubアカウントのMDを収集・集約し、そのナレッジをもとに対話するクローンチャット
 
